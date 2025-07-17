@@ -1,0 +1,20 @@
+{
+  "theme": "dark",
+  "font_family": "Segoe UI",
+  "font_size": 10,
+  "window_width": 1400,
+  "window_height": 900,
+  "chat_history_limit": 100,
+  "auto_scroll": true,
+  "show_timestamps": true,
+  "group_messages": false,
+  "azure_devops_org": "",
+  "azure_devops_project": "",
+  "default_llm_provider": "openai",
+  "timeout": 30,
+  "log_level": "INFO",
+  "file_logging": true,
+  "cache_enabled": true,
+  "cache_ttl": 300,
+  "max_concurrent_requests": 5
+}
