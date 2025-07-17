@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, scrolledtext
+from tkinter import scrolledtext
+import ttkbootstrap as tb
 from typing import Dict, Any, Optional, Callable
 import threading
 from datetime import datetime
@@ -8,25 +9,25 @@ import markdown2
 
 from src.utils.logger import logger
 
-class ChatWidget(ttk.Frame):
+class ChatWidget(tb.Frame):
     """Chat widget with message history and input"""
     
-    def __init__(self, parent, main_window):
+    def __init__(self, parent, main_window, appearance_settings=None):
         print("DEBUG: Iniciando ChatWidget.__init__")
-        super().__init__(parent, style='Chat.TFrame')
+        super().__init__(parent)
         self.main_window = main_window
         self.app_controller = main_window.app_controller
-        
+
+        # Configurações de aparência
+        self.appearance_settings = appearance_settings or {}
         # Message history
         self.messages = []
         self.current_session_id = None
-        
         # UI elements
         self.chat_display = None
         self.input_frame = None
         self.input_entry = None
         self.send_button = None
-        
         # Callbacks
         self.on_message_sent = None
         
@@ -34,7 +35,7 @@ class ChatWidget(ttk.Frame):
         self.setup_widget()
         print("DEBUG: Chamando setup_bindings")
         self.setup_bindings()
-        
+        self.apply_appearance_settings(self.appearance_settings)
         print("DEBUG: ChatWidget.__init__ concluído")
         logger.info("Chat widget initialized")
     
@@ -90,7 +91,7 @@ class ChatWidget(ttk.Frame):
         
         # Chat display frame
         print("DEBUG: Criando chat_frame")
-        chat_frame = ttk.Frame(self)
+        chat_frame = tb.Frame(self)
         chat_frame.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
         chat_frame.grid_rowconfigure(0, weight=1)  # Chat text area takes most space
         chat_frame.grid_columnconfigure(0, weight=1)
@@ -98,7 +99,7 @@ class ChatWidget(ttk.Frame):
         
         # Chat display label
         print("DEBUG: Criando chat_label")
-        chat_label = ttk.Label(chat_frame, text="💬 Chat", font=('Arial', 12, 'bold'), background='#f0f0f0')
+        chat_label = tb.Label(chat_frame, text="💬 Chat", font=('Arial', 12, 'bold'))
         chat_label.pack(anchor='w', pady=(0, 5))
         print("DEBUG: chat_label criado")
         
@@ -135,7 +136,7 @@ class ChatWidget(ttk.Frame):
         
         # Input frame
         print("DEBUG: Criando input_frame")
-        self.input_frame = ttk.Frame(self)
+        self.input_frame = tb.Frame(self)
         self.input_frame.grid(row=1, column=0, sticky='ew', padx=5, pady=5)
         self.input_frame.grid_columnconfigure(0, weight=1)
         print("DEBUG: input_frame criado")
@@ -145,20 +146,19 @@ class ChatWidget(ttk.Frame):
         
         # Input entry - agora usando Entry real
         print("DEBUG: Criando input_entry real (Entry)")
-        self.input_entry = ttk.Entry(
+        self.input_entry = tb.Entry(
             self.input_frame,
-            font=('Arial', 10),
-            style='Chat.TEntry'
+            font=('Arial', 10)
         )
         self.input_entry.grid(row=0, column=0, sticky='ew', padx=(0, 5))
         print("DEBUG: input_entry real criado")
         
         # Send button
         print("DEBUG: Criando send_button")
-        self.send_button = ttk.Button(
+        self.send_button = tb.Button(
             self.input_frame,
             text="Enviar",
-            style='Primary.TButton',
+            bootstyle="primary",
             command=lambda: self.send_message()
         )
         self.send_button.grid(row=0, column=1)
@@ -166,8 +166,7 @@ class ChatWidget(ttk.Frame):
         
         # Configure entry style
         print("DEBUG: Configurando estilo do entry")
-        style = ttk.Style()
-        style.configure('Chat.TEntry', padding=(10, 5))
+        # The style configuration is removed as per the edit hint.
         print("DEBUG: Estilo configurado")
         
         print("DEBUG: create_input_area concluído")
@@ -492,3 +491,35 @@ class ChatWidget(ttk.Frame):
                 logger.info("Teste de visibilidade adicionado ao chat")
         except Exception as e:
             logger.error(f"Erro ao adicionar teste de visibilidade: {e}") 
+
+    def apply_appearance_settings(self, settings):
+        """Aplica configurações de aparência no chat (tema, fonte, cor)"""
+        if not settings:
+            return
+        # Tema
+        theme = settings.get('theme', 'claro')
+        if theme == 'escuro':
+            bg = '#23272e'
+            fg = '#f0f0f0'
+        else:
+            bg = 'white'
+            fg = 'black'
+        if self.chat_display:
+            self.chat_display.config(bg=bg, fg=fg, insertbackground=fg)
+        # Fonte
+        font_family = settings.get('chat_font', 'Segoe UI')
+        font_size = int(settings.get('chat_font_size', 12))
+        if self.chat_display:
+            self.chat_display.config(font=(font_family, font_size))
+        if self.input_entry:
+            self.input_entry.config(font=(font_family, max(font_size-2, 8)))
+        # Cor de destaque (mensagens do assistente)
+        highlight = settings.get('highlight_color', '#27ae60')
+        if self.chat_display:
+            self.chat_display.tag_configure('assistant', foreground=highlight, font=(font_family, font_size))
+        # Atualizar tags de markdown
+        if self.chat_display:
+            self.chat_display.tag_configure('bold', font=(font_family, font_size, 'bold'))
+            self.chat_display.tag_configure('italic', font=(font_family, font_size, 'italic'))
+            self.chat_display.tag_configure('code', font=('Consolas', font_size), background='#f4f4f4', foreground='#c0392b')
+            self.chat_display.tag_configure('header', font=(font_family, font_size+2, 'bold'), foreground='#2980b9') 

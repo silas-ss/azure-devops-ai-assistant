@@ -1,5 +1,6 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import messagebox
+import ttkbootstrap as tb
 from typing import Dict, Any, Optional, Callable, List
 import threading
 import traceback
@@ -7,11 +8,11 @@ from datetime import datetime
 
 from src.utils.logger import logger
 
-class SidebarWidget(ttk.Frame):
+class SidebarWidget(tb.Frame):
     """Sidebar widget with navigation and project info"""
     
     def __init__(self, parent, main_window):
-        super().__init__(parent, style='Sidebar.TFrame')
+        super().__init__(parent)
         self.main_window = main_window
         self.app_controller = main_window.app_controller
         
@@ -68,26 +69,25 @@ class SidebarWidget(ttk.Frame):
         """Create navigation section"""
         print("DEBUG: Criando frame de navegação")
         # Navigation frame
-        self.navigation_frame = ttk.Frame(self)
+        self.navigation_frame = tb.Frame(self)
         self.navigation_frame.grid(row=0, column=0, sticky='ew', padx=5, pady=5)
         self.navigation_frame.grid_columnconfigure(0, weight=1)
         print("DEBUG: Frame de navegação criado")
         
         # Navigation label
-        nav_label = ttk.Label(
+        nav_label = tb.Label(
             self.navigation_frame,
             text="🧭 Navegação",
-            style='Title.TLabel',
-            foreground='white'
+            font=("Segoe UI", 14, "bold")
         )
         nav_label.grid(row=0, column=0, sticky='w', pady=(0, 10))
         
         # Navigation buttons
         for i, (section_id, section_name) in enumerate(self.sections.items()):
-            button = ttk.Button(
+            button = tb.Button(
                 self.navigation_frame,
                 text=section_name,
-                style='Nav.TButton',
+                bootstyle="secondary",
                 command=lambda sid=section_id: self.navigate_to_section(sid)
             )
             button.grid(row=i+1, column=0, sticky='ew', pady=2)
@@ -99,16 +99,15 @@ class SidebarWidget(ttk.Frame):
     def create_project_info(self):
         """Create project information section"""
         # Project info frame
-        self.project_frame = ttk.Frame(self)
+        self.project_frame = tb.Frame(self)
         self.project_frame.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)
         self.project_frame.grid_columnconfigure(0, weight=1)
         
         # Project info label
-        project_label = ttk.Label(
+        project_label = tb.Label(
             self.project_frame,
             text="📁 Projeto",
-            style='Title.TLabel',
-            foreground='white'
+            font=("Segoe UI", 12, "bold")
         )
         project_label.grid(row=0, column=0, sticky='w', pady=(0, 10))
         
@@ -121,74 +120,67 @@ class SidebarWidget(ttk.Frame):
     def create_project_details(self):
         """Create project details section"""
         # Project details frame
-        details_frame = ttk.Frame(self.project_frame)
+        details_frame = tb.Frame(self.project_frame)
         details_frame.grid(row=1, column=0, sticky='ew', pady=5)
         details_frame.grid_columnconfigure(1, weight=1)
         
         # Organization
-        org_label = ttk.Label(
+        org_label = tb.Label(
             details_frame,
             text="Organização:",
-            style='Subtitle.TLabel',
-            foreground='white'
+            font=("Segoe UI", 10, "bold")
         )
         org_label.grid(row=0, column=0, sticky='w', pady=2)
         
-        self.org_value = ttk.Label(
+        self.org_value = tb.Label(
             details_frame,
             text="Não configurado",
-            style='Info.TLabel',
-            foreground='#bdc3c7'
+            font=("Segoe UI", 10)
         )
         self.org_value.grid(row=0, column=1, sticky='w', padx=(5, 0), pady=2)
         
         # Project
-        project_label = ttk.Label(
+        project_label = tb.Label(
             details_frame,
             text="Projeto:",
-            style='Subtitle.TLabel',
-            foreground='white'
+            font=("Segoe UI", 10, "bold")
         )
         project_label.grid(row=1, column=0, sticky='w', pady=2)
         
-        self.project_value = ttk.Label(
+        self.project_value = tb.Label(
             details_frame,
             text="Não configurado",
-            style='Info.TLabel',
-            foreground='#bdc3c7'
+            font=("Segoe UI", 10)
         )
         self.project_value.grid(row=1, column=1, sticky='w', padx=(5, 0), pady=2)
         
         # Team
-        team_label = ttk.Label(
+        team_label = tb.Label(
             details_frame,
             text="Equipe:",
-            style='Subtitle.TLabel',
-            foreground='white'
+            font=("Segoe UI", 10, "bold")
         )
         team_label.grid(row=2, column=0, sticky='w', pady=2)
         
-        self.team_value = ttk.Label(
+        self.team_value = tb.Label(
             details_frame,
             text="Não configurado",
-            style='Info.TLabel',
-            foreground='#bdc3c7'
+            font=("Segoe UI", 10)
         )
         self.team_value.grid(row=2, column=1, sticky='w', padx=(5, 0), pady=2)
     
     def create_quick_actions(self):
         """Create quick actions section"""
         # Quick actions frame
-        actions_frame = ttk.Frame(self.project_frame)
+        actions_frame = tb.Frame(self.project_frame)
         actions_frame.grid(row=2, column=0, sticky='ew', pady=10)
         actions_frame.grid_columnconfigure(0, weight=1)
         
         # Quick actions label
-        actions_label = ttk.Label(
+        actions_label = tb.Label(
             actions_frame,
             text="⚡ Ações Rápidas",
-            style='Subtitle.TLabel',
-            foreground='white'
+            font=("Segoe UI", 10, "bold")
         )
         actions_label.grid(row=0, column=0, sticky='w', pady=(0, 5))
         
@@ -201,27 +193,26 @@ class SidebarWidget(ttk.Frame):
         ]
         
         for i, (text, command) in enumerate(quick_actions):
-            button = ttk.Button(
+            button = tb.Button(
                 actions_frame,
                 text=text,
-                style='QuickAction.TButton',
+                bootstyle="success",
                 command=command
             )
-            button.grid(row=i+1, column=0, sticky='ew', pady=1)
+            button.grid(row=i+1, column=0, sticky='ew', pady=2)
     
     def create_status_section(self):
         """Create status section"""
         # Status frame
-        self.status_frame = ttk.Frame(self)
+        self.status_frame = tb.Frame(self)
         self.status_frame.grid(row=2, column=0, sticky='ew', padx=5, pady=5)
         self.status_frame.grid_columnconfigure(0, weight=1)
         
         # Status label
-        status_label = ttk.Label(
+        status_label = tb.Label(
             self.status_frame,
             text="🔗 Status",
-            style='Title.TLabel',
-            foreground='white'
+            font=("Segoe UI", 12, "bold")
         )
         status_label.grid(row=0, column=0, sticky='w', pady=(0, 5))
         
@@ -229,33 +220,31 @@ class SidebarWidget(ttk.Frame):
         self.create_connection_status()
         
         # Last update
-        self.last_update_label = ttk.Label(
+        self.last_update_label = tb.Label(
             self.status_frame,
             text="Última atualização: Nunca",
-            style='Info.TLabel',
-            foreground='#bdc3c7'
+            font=("Segoe UI", 10)
         )
         self.last_update_label.grid(row=3, column=0, sticky='w', pady=5)
     
     def create_connection_status(self):
         """Create connection status indicators"""
         # Azure DevOps status
-        azure_frame = ttk.Frame(self.status_frame)
+        azure_frame = tb.Frame(self.status_frame)
         azure_frame.grid(row=1, column=0, sticky='ew', pady=2)
         azure_frame.grid_columnconfigure(1, weight=1)
         
-        azure_icon = ttk.Label(
+        azure_icon = tb.Label(
             azure_frame,
             text="🔴",
             font=('Segoe UI', 12)
         )
         azure_icon.grid(row=0, column=0, padx=(0, 5))
         
-        azure_label = ttk.Label(
+        azure_label = tb.Label(
             azure_frame,
             text="Azure DevOps",
-            style='Info.TLabel',
-            foreground='white'
+            font=("Segoe UI", 10)
         )
         azure_label.grid(row=0, column=1, sticky='w')
         
@@ -263,22 +252,21 @@ class SidebarWidget(ttk.Frame):
         self.azure_status_label = azure_label
         
         # LLM status
-        llm_frame = ttk.Frame(self.status_frame)
+        llm_frame = tb.Frame(self.status_frame)
         llm_frame.grid(row=2, column=0, sticky='ew', pady=2)
         llm_frame.grid_columnconfigure(1, weight=1)
         
-        llm_icon = ttk.Label(
+        llm_icon = tb.Label(
             llm_frame,
             text="🔴",
             font=('Segoe UI', 12)
         )
         llm_icon.grid(row=0, column=0, padx=(0, 5))
         
-        llm_label = ttk.Label(
+        llm_label = tb.Label(
             llm_frame,
             text="LLM",
-            style='Info.TLabel',
-            foreground='white'
+            font=("Segoe UI", 10)
         )
         llm_label.grid(row=0, column=1, sticky='w')
         

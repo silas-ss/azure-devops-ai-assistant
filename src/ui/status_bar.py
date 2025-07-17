@@ -1,12 +1,12 @@
 import tkinter as tk
-from tkinter import ttk
+import ttkbootstrap as tb
 from typing import Dict, Any, Optional
 from datetime import datetime
 import threading
 
 from src.utils.logger import logger
 
-class StatusBar(ttk.Frame):
+class StatusBar(tb.Frame):
     """Status bar with connection indicators and system info"""
     
     def __init__(self, parent):
@@ -52,43 +52,39 @@ class StatusBar(ttk.Frame):
         self.grid_columnconfigure(1, weight=1)  # Status label takes most space
         
         # Azure DevOps status indicator
-        self.azure_devops_indicator = ttk.Label(
+        self.azure_devops_indicator = tb.Label(
             self,
             text=f"{self.status_icons['disconnected']} Azure DevOps",
-            font=('Segoe UI', 9),
-            foreground=self.status_colors['error']
+            font=('Segoe UI', 9)
         )
         self.azure_devops_indicator.grid(row=0, column=0, padx=(5, 10), pady=2)
         
         # LLM status indicator
-        self.llm_indicator = ttk.Label(
+        self.llm_indicator = tb.Label(
             self,
             text=f"{self.status_icons['disconnected']} LLM",
-            font=('Segoe UI', 9),
-            foreground=self.status_colors['error']
+            font=('Segoe UI', 9)
         )
         self.llm_indicator.grid(row=0, column=2, padx=(0, 10), pady=2)
         
         # Main status label
-        self.status_label = ttk.Label(
+        self.status_label = tb.Label(
             self,
             text=self.current_status,
-            font=('Segoe UI', 9),
-            foreground=self.status_colors[self.status_type]
+            font=('Segoe UI', 9)
         )
         self.status_label.grid(row=0, column=1, sticky='ew', padx=5, pady=2)
         
         # Time label
-        self.time_label = ttk.Label(
+        self.time_label = tb.Label(
             self,
             text="",
-            font=('Segoe UI', 9),
-            foreground='#95a5a6'
+            font=('Segoe UI', 9)
         )
         self.time_label.grid(row=0, column=3, padx=(0, 5), pady=2)
         
         # Progress bar (hidden by default)
-        self.progress_bar = ttk.Progressbar(
+        self.progress_bar = tb.Progressbar(
             self,
             mode='indeterminate',
             length=100
@@ -258,7 +254,7 @@ class StatusBar(ttk.Frame):
         self.set_status("Pronto", "info")
         self.show_progress(False)
 
-class ConnectionIndicator(ttk.Frame):
+class ConnectionIndicator(tb.Frame):
     """Individual connection indicator widget"""
     
     def __init__(self, parent, name: str, on_click: Optional[callable] = None):
@@ -279,7 +275,7 @@ class ConnectionIndicator(ttk.Frame):
         self.grid_columnconfigure(0, weight=1)
         
         # Indicator label
-        self.indicator_label = ttk.Label(
+        self.indicator_label = tb.Label(
             self,
             text="🔴",
             font=('Segoe UI', 12)
@@ -287,7 +283,7 @@ class ConnectionIndicator(ttk.Frame):
         self.indicator_label.grid(row=0, column=0, padx=2)
         
         # Status label
-        self.status_label = ttk.Label(
+        self.status_label = tb.Label(
             self,
             text=self.name,
             font=('Segoe UI', 9)
