@@ -4,6 +4,7 @@ from typing import Dict, Any, Optional, Callable
 import threading
 from datetime import datetime
 import re
+import markdown2
 
 from src.utils.logger import logger
 
@@ -245,10 +246,16 @@ class ChatWidget(ttk.Frame):
         })
     
     def add_assistant_message(self, message: str):
-        """Add assistant message to chat"""
+        """Adiciona mensagem do assistente ao chat, renderizando markdown visualmente"""
         timestamp = datetime.now().strftime("%H:%M")
         self.chat_display.config(state=tk.NORMAL)
-        self.chat_display.insert(tk.END, f"[{timestamp}] Assistente: {message}\n\n", 'assistant')
+        # Converte markdown para HTML
+        html = markdown2.markdown(message)
+        # Insere timestamp e prefixo
+        self.chat_display.insert(tk.END, f"[{timestamp}] Assistente: \n", 'assistant')
+        # Faz parsing do HTML e aplica tags visuais
+        self.parse_html_to_tk_tags(html)
+        self.chat_display.insert(tk.END, "\n\n")
         self.chat_display.config(state=tk.DISABLED)
         self.chat_display.see(tk.END)
         # Garantir que o campo de entrada permaneça habilitado e com foco após resposta
@@ -259,6 +266,44 @@ class ChatWidget(ttk.Frame):
             'content': message,
             'timestamp': datetime.now()
         })
+
+    def parse_html_to_tk_tags(self, html: str):
+        """Faz parsing básico do HTML gerado pelo markdown e aplica tags no Text"""
+        # Importa aqui para evitar dependência global
+        from html.parser import HTMLParser
+        text_widget = self.chat_display
+        class TkMarkdownParser(HTMLParser):
+            def __init__(self, text_widget):
+                super().__init__()
+                self.text_widget = text_widget
+                self.current_tags = []
+            def handle_starttag(self, tag, attrs):
+                if tag in ('strong', 'b'):
+                    self.current_tags.append('bold')
+                elif tag in ('em', 'i'):
+                    self.current_tags.append('italic')
+                elif tag == 'code':
+                    self.current_tags.append('code')
+                elif tag in ('ul', 'ol'):
+                    self.current_tags.append('list')
+                elif tag == 'li':
+                    self.text_widget.insert(tk.END, '• ', tuple(self.current_tags))
+                elif tag in ('h1', 'h2', 'h3'):
+                    self.current_tags.append('header')
+            def handle_endtag(self, tag):
+                if tag in ('strong', 'b', 'em', 'i', 'code', 'ul', 'ol', 'h1', 'h2', 'h3'):
+                    if self.current_tags:
+                        self.current_tags.pop()
+            def handle_data(self, data):
+                self.text_widget.insert(tk.END, data, tuple(self.current_tags))
+        # Configura tags visuais
+        text_widget.tag_configure('bold', font=('Segoe UI', 10, 'bold'))
+        text_widget.tag_configure('italic', font=('Segoe UI', 10, 'italic'))
+        text_widget.tag_configure('code', font=('Consolas', 10), background='#f4f4f4', foreground='#c0392b')
+        text_widget.tag_configure('header', font=('Segoe UI', 12, 'bold'), foreground='#2980b9')
+        # Parseia o HTML
+        parser = TkMarkdownParser(text_widget)
+        parser.feed(html)
     
     def add_system_message(self, message: str):
         """Add system message to chat"""
