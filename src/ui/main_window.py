@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox, scrolledtext
 from typing import Dict, Any, Optional, Callable
 import threading
 from datetime import datetime
+import ttkbootstrap as tb
 
 from src.ui.chat_widget import ChatWidget
 from src.ui.sidebar_widget import SidebarWidget
@@ -15,11 +16,12 @@ class MainWindow:
     
     def __init__(self, app_controller):
         self.app_controller = app_controller
-        self.root = tk.Tk()
+        # Tema inicial (padrão claro)
+        initial_theme = 'flatly'
+        self.root = tb.Window(themename=initial_theme)
         self.setup_window()
         self.create_widgets()
         self.setup_bindings()
-        
         logger.info("Main window initialized")
     
     def setup_window(self):
@@ -142,7 +144,13 @@ class MainWindow:
         
         # Create chat area
         print("DEBUG: Criando chat_widget")
-        self.chat_widget = ChatWidget(self.main_frame, self)
+        # Obter configurações de aparência do app_controller ou settings
+        appearance = {}
+        if hasattr(self.app_controller, 'get_ui_settings'):
+            appearance = self.app_controller.get_ui_settings()
+        elif hasattr(self.app_controller, 'settings'):
+            appearance = getattr(self.app_controller, 'settings', {})
+        self.chat_widget = ChatWidget(self.main_frame, self, appearance_settings=appearance)
         self.chat_widget.grid(row=0, column=1, sticky='nsew', padx=(2, 0))
         print("DEBUG: Chat_widget criado com sucesso")
         
@@ -405,3 +413,39 @@ Para suporte, consulte a documentação."""
             print(f"DEBUG: Erro no método run: {e}")
             logger.error(f"Error running application: {e}")
             raise 
+
+    def apply_theme(self, theme):
+        """Aplica o tema claro/escuro usando ttkbootstrap"""
+        # flatly = claro, darkly = escuro
+        if theme == 'escuro':
+            self.root.style.theme_use('darkly')
+        else:
+            self.root.style.theme_use('flatly')
+
+    def apply_theme_recursive(self, widget, bg, fg):
+        """Aplica fundo/texto em todos os widgets filhos recursivamente"""
+        # Aplica em Frame, Label, Button, Entry, Text, etc
+        widget_type = widget.winfo_class()
+        try:
+            if widget_type in ('Frame', 'TFrame'):
+                widget.config(bg=bg)
+            elif widget_type in ('Label', 'TLabel'):
+                widget.config(bg=bg, fg=fg)
+            elif widget_type in ('Button', 'TButton'):
+                widget.config(bg=bg, fg=fg)
+            elif widget_type in ('Entry', 'TEntry'):
+                widget.config(bg=bg, fg=fg, insertbackground=fg)
+            elif widget_type in ('Text', 'ScrolledText'):
+                widget.config(bg=bg, fg=fg, insertbackground=fg)
+        except Exception:
+            pass
+        # Recursivo para filhos
+        for child in widget.winfo_children():
+            self.apply_theme_recursive(child, bg, fg)
+
+    def update_chat_appearance(self, new_settings):
+        """Atualiza aparência do chat e tema globalmente"""
+        theme = new_settings.get('theme', 'claro')
+        self.apply_theme(theme)
+        if hasattr(self, 'chat_widget') and self.chat_widget:
+            self.chat_widget.apply_appearance_settings(new_settings) 

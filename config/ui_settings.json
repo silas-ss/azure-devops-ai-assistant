@@ -1,5 +1,5 @@
 {
-  "theme": "dark",
+  "theme": "escuro",
   "font_family": "Segoe UI",
   "font_size": 10,
   "window_width": 1400,
@@ -16,5 +16,8 @@
   "file_logging": true,
   "cache_enabled": true,
   "cache_ttl": 300,
-  "max_concurrent_requests": 5
+  "max_concurrent_requests": 5,
+  "chat_font": "Monaco",
+  "chat_font_size": 16,
+  "highlight_color": "#27ae60"
 }
