@@ -273,6 +273,12 @@ class CommandLLMParser:
     def _build_agent_prompt(self, user_text: str) -> str:
         exemplos = """
 Exemplos:
+Usuário: "Quais bugs foram modificados hoje?"
+Resposta: {"function": "listar_work_items", "parameters": {"tipo": "Bug", "modificado_em": "hoje"}}
+Usuário: "Quais work items foram criados ontem?"
+Resposta: {"function": "listar_work_items", "parameters": {"criado_em": "ontem"}}
+Usuário: "Quais tarefas foram modificadas em 2024-06-01?"
+Resposta: {"function": "listar_work_items", "parameters": {"tipo": "Task", "modificado_em": "2024-06-01"}}
 Usuário: "Quantos bugs estão abertos?"
 Resposta: {"function": "listar_work_items", "parameters": {"tipo": "Bug", "estado": "Active"}}
 Usuário: "Quais boards existem?"
