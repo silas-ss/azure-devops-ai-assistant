@@ -46,96 +46,124 @@ class SidebarWidget(tb.Frame):
     def setup_widget(self):
         """Setup sidebar layout"""
         print("DEBUG: Configurando sidebar layout")
-        
+
+        # Obter configurações do usuário
+        settings = {}
+        if hasattr(self.main_window.app_controller, 'get_ui_settings'):
+            settings = self.main_window.app_controller.get_ui_settings()
+        elif hasattr(self.main_window.app_controller, 'settings'):
+            settings = getattr(self.main_window.app_controller, 'settings', {})
+
+        # Garantir que a fonte seja sempre válida
+        font_family = str(settings.get('chat_font', 'Arial')).strip()
+        # Lista de fontes seguras/fallback
+        safe_fonts = ['Arial', 'Helvetica', 'Segoe UI', 'Tahoma', 'Verdana']
+        # Se a fonte não for válida, usar Arial
+        if not font_family or font_family.lower() in ['ui', ''] or font_family not in safe_fonts:
+            font_family = 'Arial'
+            print(f"DEBUG: Fonte inválida detectada, usando fallback: {font_family}")
+
+        # Garantir que o tamanho da fonte seja sempre um inteiro válido
+        try:
+            font_size = int(settings.get('chat_font_size', 12))
+            if font_size < 8:  # Muito pequeno
+                font_size = 8
+            elif font_size > 32:  # Muito grande
+                font_size = 32
+        except (ValueError, TypeError):
+            font_size = 12  # Fallback seguro
+            print("DEBUG: Tamanho de fonte inválido detectado, usando fallback: 12")
+
+        print(f"DEBUG: Usando fonte: {font_family}, tamanho: {font_size}")
+
         # Configure grid
         self.grid_rowconfigure(1, weight=1)  # Project info takes most space
         self.grid_columnconfigure(0, weight=1)
-        
+
         # Create navigation
         print("DEBUG: Criando navegação")
-        self.create_navigation()
-        
+        self.create_navigation(font_family, font_size)
+
         # Create project info
         print("DEBUG: Criando informações do projeto")
-        self.create_project_info()
-        
+        self.create_project_info(font_family, font_size)
+
         # Create status section
         print("DEBUG: Criando seção de status")
-        self.create_status_section()
-        
+        self.create_status_section(font_family, font_size)
+
         print("DEBUG: Sidebar layout configurado com sucesso")
     
-    def create_navigation(self):
+    def create_navigation(self, font_family, font_size):
         """Create navigation section"""
         print("DEBUG: Criando frame de navegação")
         # Navigation frame
-        self.navigation_frame = tb.Frame(self)
-        self.navigation_frame.grid(row=0, column=0, sticky='ew', padx=5, pady=5)
+        self.navigation_frame = tb.Frame(self, style='Card.TFrame')
+        self.navigation_frame.grid(row=0, column=0, sticky='ew', padx=10, pady=10)
         self.navigation_frame.grid_columnconfigure(0, weight=1)
         print("DEBUG: Frame de navegação criado")
-        
+
         # Navigation label
         nav_label = tb.Label(
             self.navigation_frame,
             text="🧭 Navegação",
-            font=("Segoe UI", 14, "bold")
+            style='Title.TLabel'
         )
         nav_label.grid(row=0, column=0, sticky='w', pady=(0, 10))
-        
+
         # Navigation buttons
         for i, (section_id, section_name) in enumerate(self.sections.items()):
             button = tb.Button(
                 self.navigation_frame,
                 text=section_name,
                 bootstyle="secondary",
+                style='Nav.TButton',
                 command=lambda sid=section_id: self.navigate_to_section(sid)
             )
-            button.grid(row=i+1, column=0, sticky='ew', pady=2)
+            button.grid(row=i+1, column=0, sticky='ew', pady=4, padx=2, ipadx=4, ipady=4)
             self.nav_buttons[section_id] = button
-        
+
         # Highlight current section
         self.highlight_current_section()
     
-    def create_project_info(self):
-        """Create project information section"""
-        # Project info frame
-        self.project_frame = tb.Frame(self)
-        self.project_frame.grid(row=1, column=0, sticky='nsew', padx=5, pady=5)
+    def create_project_info(self, font_family, font_size):
+        """Create project info section"""
+        self.project_frame = tb.Frame(self, style='Card.TFrame')
+        self.project_frame.grid(row=1, column=0, sticky='ew', padx=10, pady=10)
         self.project_frame.grid_columnconfigure(0, weight=1)
-        
-        # Project info label
+
         project_label = tb.Label(
             self.project_frame,
             text="📁 Projeto",
-            font=("Segoe UI", 12, "bold")
+            style='Subtitle.TLabel'
         )
-        project_label.grid(row=0, column=0, sticky='w', pady=(0, 10))
+        project_label.grid(row=0, column=0, sticky='w', pady=(0, 5))
         
         # Project details
-        self.create_project_details()
+        self.create_project_details(font_family, font_size)
         
         # Quick actions
-        self.create_quick_actions()
+        self.create_quick_actions(font_family, font_size)
     
-    def create_project_details(self):
+    def create_project_details(self, font_family, font_size):
         """Create project details section"""
         # Project details frame
         details_frame = tb.Frame(self.project_frame)
-        details_frame.grid(row=1, column=0, sticky='ew', pady=5)
+        details_frame.grid(row=1, column=0, sticky='ew')
         details_frame.grid_columnconfigure(1, weight=1)
         
         # Organization
         org_label = tb.Label(
             details_frame,
             text="Organização:",
-            font=("Segoe UI", 10, "bold")
+            font=(font_family, int(font_size)-1, "bold")
         )
         org_label.grid(row=0, column=0, sticky='w', pady=2)
         
         self.org_value = tb.Label(
             details_frame,
             text="Não configurado",
-            font=("Segoe UI", 10)
+            font=(font_family, int(font_size)-1)
         )
         self.org_value.grid(row=0, column=1, sticky='w', padx=(5, 0), pady=2)
         
@@ -143,14 +171,14 @@ class SidebarWidget(tb.Frame):
         project_label = tb.Label(
             details_frame,
             text="Projeto:",
-            font=("Segoe UI", 10, "bold")
+            font=(font_family, int(font_size)-1, "bold")
         )
         project_label.grid(row=1, column=0, sticky='w', pady=2)
         
         self.project_value = tb.Label(
             details_frame,
             text="Não configurado",
-            font=("Segoe UI", 10)
+            font=(font_family, int(font_size)-1)
         )
         self.project_value.grid(row=1, column=1, sticky='w', padx=(5, 0), pady=2)
         
@@ -158,29 +186,29 @@ class SidebarWidget(tb.Frame):
         team_label = tb.Label(
             details_frame,
             text="Equipe:",
-            font=("Segoe UI", 10, "bold")
+            font=(font_family, int(font_size)-1, "bold")
         )
         team_label.grid(row=2, column=0, sticky='w', pady=2)
         
         self.team_value = tb.Label(
             details_frame,
             text="Não configurado",
-            font=("Segoe UI", 10)
+            font=(font_family, int(font_size)-1)
         )
         self.team_value.grid(row=2, column=1, sticky='w', padx=(5, 0), pady=2)
     
-    def create_quick_actions(self):
+    def create_quick_actions(self, font_family, font_size):
         """Create quick actions section"""
         # Quick actions frame
         actions_frame = tb.Frame(self.project_frame)
-        actions_frame.grid(row=2, column=0, sticky='ew', pady=10)
+        actions_frame.grid(row=2, column=0, sticky='ew', pady=(10, 0))
         actions_frame.grid_columnconfigure(0, weight=1)
         
         # Quick actions label
         actions_label = tb.Label(
             actions_frame,
             text="⚡ Ações Rápidas",
-            font=("Segoe UI", 10, "bold")
+            font=(font_family, int(font_size)-1, "bold")
         )
         actions_label.grid(row=0, column=0, sticky='w', pady=(0, 5))
         
@@ -201,33 +229,31 @@ class SidebarWidget(tb.Frame):
             )
             button.grid(row=i+1, column=0, sticky='ew', pady=2)
     
-    def create_status_section(self):
+    def create_status_section(self, font_family, font_size):
         """Create status section"""
-        # Status frame
-        self.status_frame = tb.Frame(self)
-        self.status_frame.grid(row=2, column=0, sticky='ew', padx=5, pady=5)
+        self.status_frame = tb.Frame(self, style='Card.TFrame')
+        self.status_frame.grid(row=2, column=0, sticky='ew', padx=10, pady=10)
         self.status_frame.grid_columnconfigure(0, weight=1)
-        
-        # Status label
+
         status_label = tb.Label(
             self.status_frame,
             text="🔗 Status",
-            font=("Segoe UI", 12, "bold")
+            style='Subtitle.TLabel'
         )
         status_label.grid(row=0, column=0, sticky='w', pady=(0, 5))
         
         # Connection status
-        self.create_connection_status()
+        self.create_connection_status(font_family, font_size)
         
         # Last update
         self.last_update_label = tb.Label(
             self.status_frame,
             text="Última atualização: Nunca",
-            font=("Segoe UI", 10)
+            font=(font_family, int(font_size)-1)
         )
         self.last_update_label.grid(row=3, column=0, sticky='w', pady=5)
     
-    def create_connection_status(self):
+    def create_connection_status(self, font_family, font_size):
         """Create connection status indicators"""
         # Azure DevOps status
         azure_frame = tb.Frame(self.status_frame)
@@ -237,14 +263,14 @@ class SidebarWidget(tb.Frame):
         azure_icon = tb.Label(
             azure_frame,
             text="🔴",
-            font=('Segoe UI', 12)
+            font=(font_family, int(font_size))
         )
         azure_icon.grid(row=0, column=0, padx=(0, 5))
         
         azure_label = tb.Label(
             azure_frame,
             text="Azure DevOps",
-            font=("Segoe UI", 10)
+            font=(font_family, int(font_size)-1)
         )
         azure_label.grid(row=0, column=1, sticky='w')
         
@@ -259,14 +285,14 @@ class SidebarWidget(tb.Frame):
         llm_icon = tb.Label(
             llm_frame,
             text="🔴",
-            font=('Segoe UI', 12)
+            font=(font_family, int(font_size))
         )
         llm_icon.grid(row=0, column=0, padx=(0, 5))
         
         llm_label = tb.Label(
             llm_frame,
             text="LLM",
-            font=("Segoe UI", 10)
+            font=(font_family, int(font_size)-1)
         )
         llm_label.grid(row=0, column=1, sticky='w')
         

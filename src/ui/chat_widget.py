@@ -42,20 +42,28 @@ class ChatWidget(tb.Frame):
     def setup_widget(self):
         """Setup chat widget layout"""
         print("DEBUG: Iniciando setup_widget")
-        
+
+        # Obter configurações do usuário
+        settings = self.appearance_settings or {}
+        font_family = settings.get('chat_font', 'Segoe UI')
+        font_size = settings.get('chat_font_size', 12)
+        theme = settings.get('theme', 'claro')
+        chat_bg = '#FFFFFF' if theme == 'claro' else '#23272E'
+        text_color = '#212121' if theme == 'claro' else '#F5F5F5'
+
         # Configure grid with proper weights
         self.grid_rowconfigure(0, weight=1)  # Chat display takes most space
         self.grid_rowconfigure(1, weight=0)  # Input area takes no extra space
         self.grid_columnconfigure(0, weight=1)
-        
+
         # Create chat display
         print("DEBUG: Chamando create_chat_display")
-        self.create_chat_display()
-        
+        self.create_chat_display(font_family, font_size, chat_bg, text_color)
+
         # Create input area
         print("DEBUG: Chamando create_input_area")
-        self.create_input_area()
-        
+        self.create_input_area(font_family, font_size)
+
         # Force update to ensure proper layout
         self.update_idletasks()
         
@@ -85,80 +93,84 @@ class ChatWidget(tb.Frame):
         if self.input_frame:
             logger.info(f"Input frame grid info: {self.input_frame.grid_info()}")
     
-    def create_chat_display(self):
+    def create_chat_display(self, font_family, font_size, chat_bg, text_color):
         """Create chat display area"""
         print("DEBUG: Iniciando create_chat_display")
-        
+
         # Chat display frame
         print("DEBUG: Criando chat_frame")
-        chat_frame = tb.Frame(self)
-        chat_frame.grid(row=0, column=0, sticky='nsew', padx=5, pady=5)
+        chat_frame = tb.Frame(self, style='Card.TFrame')
+        chat_frame.grid(row=0, column=0, sticky='nsew', padx=10, pady=10)
         chat_frame.grid_rowconfigure(0, weight=1)  # Chat text area takes most space
         chat_frame.grid_columnconfigure(0, weight=1)
         print("DEBUG: chat_frame criado e configurado")
-        
+
         # Chat display label
         print("DEBUG: Criando chat_label")
-        chat_label = tb.Label(chat_frame, text="💬 Chat", font=('Arial', 12, 'bold'))
+        chat_label = tb.Label(chat_frame, text="💬 Chat", font=(font_family, font_size+1, 'bold'), style='Subtitle.TLabel')
         chat_label.pack(anchor='w', pady=(0, 5))
         print("DEBUG: chat_label criado")
-        
+
         # Chat text area - agora usando ScrolledText
         print("DEBUG: Criando chat display real (ScrolledText)")
         self.chat_display = scrolledtext.ScrolledText(
             chat_frame,
             wrap=tk.WORD,
-            font=('Arial', 12),
+            font=(font_family, font_size),
             height=15,
             width=50,
-            bg='white',
-            fg='black',
-            state=tk.DISABLED
+            bg=chat_bg,
+            fg=text_color,
+            state=tk.DISABLED,
+            borderwidth=2,
+            relief='flat',
+            highlightthickness=0
         )
         self.chat_display.pack(fill=tk.BOTH, expand=True, side=tk.BOTTOM)
         print("DEBUG: Chat display real criado")
-        
+
         # Force update to ensure proper layout
         self.chat_display.update_idletasks()
         print("DEBUG: Chat display configurado")
-        
+
         # Configure tags for different message types
-        self.chat_display.tag_configure('user', foreground='#2c3e50', font=('Segoe UI', 10, 'bold'))
-        self.chat_display.tag_configure('assistant', foreground='#27ae60', font=('Segoe UI', 10))
-        self.chat_display.tag_configure('system', foreground='#e74c3c', font=('Segoe UI', 10, 'italic'))
-        self.chat_display.tag_configure('error', foreground='#e74c3c', font=('Segoe UI', 10, 'bold'))
-        self.chat_display.tag_configure('timestamp', foreground='#95a5a6', font=('Segoe UI', 8))
+        self.chat_display.tag_configure('user', foreground='#2c3e50', font=(font_family, font_size, 'bold'))
+        self.chat_display.tag_configure('assistant', foreground='#27ae60', font=(font_family, font_size))
+        self.chat_display.tag_configure('system', foreground='#e74c3c', font=(font_family, font_size, 'italic'))
+        self.chat_display.tag_configure('error', foreground='#e74c3c', font=(font_family, font_size, 'bold'))
+        self.chat_display.tag_configure('timestamp', foreground='#95a5a6', font=(font_family, font_size-2))
         self.chat_display.tag_configure('separator', foreground='#bdc3c7')
     
-    def create_input_area(self):
+    def create_input_area(self, font_family, font_size):
         """Create input area for messages"""
         print("DEBUG: Iniciando create_input_area")
-        
+
         # Input frame
         print("DEBUG: Criando input_frame")
-        self.input_frame = tb.Frame(self)
-        self.input_frame.grid(row=1, column=0, sticky='ew', padx=5, pady=5)
+        self.input_frame = tb.Frame(self, style='Card.TFrame')
+        self.input_frame.grid(row=1, column=0, sticky='ew', padx=10, pady=10)
         self.input_frame.grid_columnconfigure(0, weight=1)
         print("DEBUG: input_frame criado")
-        
+
         # Force update to ensure proper layout
         self.input_frame.update_idletasks()
-        
+
         # Input entry - agora usando Entry real
         print("DEBUG: Criando input_entry real (Entry)")
         self.input_entry = tb.Entry(
             self.input_frame,
-            font=('Arial', 10)
+            font=(font_family, font_size)
         )
         self.input_entry.grid(row=0, column=0, sticky='ew', padx=(0, 5))
         print("DEBUG: input_entry real criado")
-        
+
         # Send button
         print("DEBUG: Criando send_button")
         self.send_button = tb.Button(
             self.input_frame,
             text="Enviar",
             bootstyle="primary",
+            style='Primary.TButton',
             command=lambda: self.send_message()
         )
         self.send_button.grid(row=0, column=1)

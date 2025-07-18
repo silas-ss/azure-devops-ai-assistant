@@ -58,67 +58,127 @@ class MainWindow:
         self.setup_styles()
     
     def setup_styles(self):
-        """Configure application styles"""
+        """Configure application styles com base nas configurações do usuário"""
         style = ttk.Style()
-        
-        # Configure theme
+
+        # Obter configurações do usuário
+        settings = {}
+        if hasattr(self.app_controller, 'get_ui_settings'):
+            settings = self.app_controller.get_ui_settings()
+        elif hasattr(self.app_controller, 'settings'):
+            settings = getattr(self.app_controller, 'settings', {})
+
+        # Garantir que a fonte seja sempre válida
+        font_family = str(settings.get('chat_font', 'Arial')).strip()
+        # Lista de fontes seguras/fallback
+        safe_fonts = ['Arial', 'Helvetica', 'Segoe UI', 'Tahoma', 'Verdana']
+        # Se a fonte não for válida, usar Arial
+        if not font_family or font_family.lower() in ['ui', ''] or font_family not in safe_fonts:
+            font_family = 'Arial'
+            print(f"DEBUG: Fonte inválida detectada em main_window, usando fallback: {font_family}")
+
+        # Garantir que o tamanho da fonte seja sempre um inteiro válido
         try:
-            style.theme_use('clam')
+            font_size = int(settings.get('chat_font_size', 12))
+            if font_size < 8:  # Muito pequeno
+                font_size = 8
+            elif font_size > 32:  # Muito grande
+                font_size = 32
+        except (ValueError, TypeError):
+            font_size = 12  # Fallback seguro
+            print("DEBUG: Tamanho de fonte inválido detectado em main_window, usando fallback: 12")
+
+        theme = settings.get('theme', 'claro')
+        highlight_color = settings.get('highlight_color', '#1976D2')
+
+        print(f"DEBUG: MainWindow usando fonte: {font_family}, tamanho: {font_size}")
+
+        # Definir tema do ttkbootstrap
+        try:
+            if theme == 'escuro':
+                style.theme_use('darkly')
+            else:
+                style.theme_use('flatly')
         except:
             pass
-        
-        # Configure colors
-        style.configure('Main.TFrame', background='#f0f0f0')
-        style.configure('Sidebar.TFrame', background='#2c3e50')
-        style.configure('Chat.TFrame', background='#ffffff')
-        
-        # Configure buttons
+
+        # Cores principais
+        azul_principal = '#1976D2'
+        azul_claro = '#E3F2FD'
+        cinza_claro = '#F5F5F5'
+        branco = '#FFFFFF'
+        preto = '#212121'
+        sidebar_bg = '#23272E' if theme == 'escuro' else '#2c3e50'
+        main_bg = cinza_claro if theme == 'claro' else '#181A1B'
+        chat_bg = branco if theme == 'claro' else '#23272E'
+        card_bg = branco if theme == 'claro' else '#23272E'
+        text_color = preto if theme == 'claro' else '#F5F5F5'
+
+        # Estilos principais
+        style.configure('Main.TFrame', background=main_bg)
+        style.configure('Sidebar.TFrame', background=sidebar_bg)
+        style.configure('Chat.TFrame', background=chat_bg)
+        style.configure('Card.TFrame', background=card_bg, relief='raised', borderwidth=1)
+
+        # Botões
         style.configure('Primary.TButton', 
-                      background='#3498db', 
-                      foreground='white',
-                      padding=(10, 5))
-        
+                        background=highlight_color, 
+                        foreground='white',
+                        font=(font_family, font_size),
+                        borderwidth=0,
+                        padding=(12, 6))
+        style.map('Primary.TButton', background=[('active', azul_principal)])
+
         style.configure('Success.TButton',
-                      background='#27ae60',
-                      foreground='white',
-                      padding=(10, 5))
-        
+                        background='#27ae60',
+                        foreground='white',
+                        font=(font_family, font_size),
+                        borderwidth=0,
+                        padding=(12, 6))
         style.configure('Warning.TButton',
-                      background='#f39c12',
-                      foreground='white',
-                      padding=(10, 5))
-        
-        # Configure labels
+                        background='#f39c12',
+                        foreground='white',
+                        font=(font_family, font_size),
+                        borderwidth=0,
+                        padding=(12, 6))
+
+        # Labels
         style.configure('Title.TLabel',
-                      font=('Segoe UI', 16, 'bold'),
-                      foreground='#2c3e50')
-        
+                        font=(font_family, font_size+4),
+                        foreground=highlight_color,
+                        background=main_bg)
         style.configure('Subtitle.TLabel',
-                      font=('Segoe UI', 12),
-                      foreground='#34495e')
-        
-        # Configure sidebar styles
-        style.configure('Nav.TButton',
-                      background='#34495e',
-                      foreground='white',
-                      padding=(10, 8),
-                      font=('Segoe UI', 10))
-        
-        style.configure('NavActive.TButton',
-                      background='#3498db',
-                      foreground='white',
-                      padding=(10, 8),
-                      font=('Segoe UI', 10, 'bold'))
-        
-        style.configure('QuickAction.TButton',
-                      background='#27ae60',
-                      foreground='white',
-                      padding=(8, 6),
-                      font=('Segoe UI', 9))
-        
+                        font=(font_family, font_size+2),
+                        foreground=azul_principal,
+                        background=main_bg)
         style.configure('Info.TLabel',
-                      font=('Segoe UI', 9),
-                      foreground='#95a5a6')
+                        font=(font_family, font_size-2),
+                        foreground='#95a5a6',
+                        background=main_bg)
+
+        # Sidebar
+        style.configure('Nav.TButton',
+                        background=sidebar_bg,
+                        foreground='white',
+                        font=(font_family, font_size),
+                        borderwidth=0,
+                        padding=(12, 8))
+        style.map('Nav.TButton', background=[('active', highlight_color)])
+        style.configure('NavActive.TButton',
+                        background=highlight_color,
+                        foreground='white',
+                        font=(font_family, font_size),
+                        borderwidth=0,
+                        padding=(12, 8))
+        style.configure('QuickAction.TButton',
+                        background='#27ae60',
+                        foreground='white',
+                        font=(font_family, font_size-1),
+                        borderwidth=0,
+                        padding=(10, 6))
+
+        # Ajuste global de fonte para widgets principais
+        self.root.option_add('*Font', f'{font_family} {font_size}')
     
     def create_widgets(self):
         """Create main application widgets"""

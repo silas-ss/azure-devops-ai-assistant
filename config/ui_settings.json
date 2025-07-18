@@ -17,7 +17,7 @@
   "cache_enabled": true,
   "cache_ttl": 300,
   "max_concurrent_requests": 5,
-  "chat_font": "Monaco",
-  "chat_font_size": 18,
+  "chat_font": "Segoe UI",
+  "chat_font_size": 12,
   "highlight_color": "#27ae60"
 }

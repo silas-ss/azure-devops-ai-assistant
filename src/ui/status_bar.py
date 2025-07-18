@@ -48,41 +48,63 @@ class StatusBar(tb.Frame):
     
     def setup_widget(self):
         """Setup status bar layout"""
+        # Obter configurações do usuário
+        settings = {}
+        parent = self.master if hasattr(self, 'master') else None
+        if parent and hasattr(parent, 'app_controller'):
+            if hasattr(parent.app_controller, 'get_ui_settings'):
+                settings = parent.app_controller.get_ui_settings()
+            elif hasattr(parent.app_controller, 'settings'):
+                settings = getattr(parent.app_controller, 'settings', {})
+        font_family = settings.get('chat_font', 'Segoe UI')
+        font_size = settings.get('chat_font_size', 12)
+        theme = settings.get('theme', 'claro')
+        bg_color = '#F5F5F5' if theme == 'claro' else '#23272E'
+        fg_color = '#212121' if theme == 'claro' else '#F5F5F5'
+
         # Configure grid
         self.grid_columnconfigure(1, weight=1)  # Status label takes most space
-        
+
         # Azure DevOps status indicator
         self.azure_devops_indicator = tb.Label(
             self,
             text=f"{self.status_icons['disconnected']} Azure DevOps",
-            font=('Segoe UI', 9)
+            font=(font_family, font_size-1),
+            background=bg_color,
+            foreground=fg_color
         )
         self.azure_devops_indicator.grid(row=0, column=0, padx=(5, 10), pady=2)
-        
+
         # LLM status indicator
         self.llm_indicator = tb.Label(
             self,
             text=f"{self.status_icons['disconnected']} LLM",
-            font=('Segoe UI', 9)
+            font=(font_family, font_size-1),
+            background=bg_color,
+            foreground=fg_color
         )
         self.llm_indicator.grid(row=0, column=2, padx=(0, 10), pady=2)
-        
+
         # Main status label
         self.status_label = tb.Label(
             self,
             text=self.current_status,
-            font=('Segoe UI', 9)
+            font=(font_family, font_size-1),
+            background=bg_color,
+            foreground=fg_color
         )
         self.status_label.grid(row=0, column=1, sticky='ew', padx=5, pady=2)
-        
+
         # Time label
         self.time_label = tb.Label(
             self,
             text="",
-            font=('Segoe UI', 9)
+            font=(font_family, font_size-2),
+            background=bg_color,
+            foreground=fg_color
         )
         self.time_label.grid(row=0, column=3, padx=(0, 5), pady=2)
-        
+
         # Progress bar (hidden by default)
         self.progress_bar = tb.Progressbar(
             self,
