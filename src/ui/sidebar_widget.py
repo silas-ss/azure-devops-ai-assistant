@@ -55,12 +55,12 @@ class SidebarWidget(tb.Frame):
             settings = getattr(self.main_window.app_controller, 'settings', {})
 
         # Garantir que a fonte seja sempre válida
-        font_family = str(settings.get('chat_font', 'Arial')).strip()
+        font_family = str(settings.get('chat_font', 'Segoe UI')).strip()
         # Lista de fontes seguras/fallback
         safe_fonts = ['Arial', 'Helvetica', 'Segoe UI', 'Tahoma', 'Verdana']
-        # Se a fonte não for válida, usar Arial
+        # Se a fonte não for válida, usar Segoe UI
         if not font_family or font_family.lower() in ['ui', ''] or font_family not in safe_fonts:
-            font_family = 'Arial'
+            font_family = 'Segoe UI'
             print(f"DEBUG: Fonte inválida detectada, usando fallback: {font_family}")
 
         # Garantir que o tamanho da fonte seja sempre um inteiro válido

@@ -13,6 +13,13 @@ import sys
 import os
 import traceback
 from pathlib import Path
+import codecs
+
+# Force UTF-8 encoding for stdout and stderr
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout = codecs.getwriter('utf-8')(sys.stdout.buffer, 'strict')
+if sys.stderr.encoding != 'utf-8':
+    sys.stderr = codecs.getwriter('utf-8')(sys.stderr.buffer, 'strict')
 
 # Add src to Python path
 sys.path.insert(0, str(Path(__file__).parent / "src"))
