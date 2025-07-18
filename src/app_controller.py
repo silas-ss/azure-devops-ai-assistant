@@ -2,7 +2,7 @@ import tkinter as tk
 from typing import Dict, Any, Optional, List
 import threading
 import time
-from datetime import datetime
+import datetime
 import json
 from pathlib import Path
 
@@ -48,6 +48,8 @@ class AppController:
         # Application state
         self.is_initialized = False
         self.session_data = {}
+
+        self.datetime = datetime.datetime
         
         logger.info("App controller initialized")
     
@@ -263,20 +265,89 @@ Gere uma resposta natural, clara e objetiva para o usuário, explicando o result
         if 'function' in parsed:
             func_name = parsed['function']
             params = parsed.get('parameters', {})
+            print("DEBUG params:", params)
+            print("DEBUG func_name:", func_name)
             # Mapear nome da função para função Python real
             if func_name == 'listar_work_items':
-                items = self.azure_devops_service.get_work_items(
-                    work_item_types=[params.get('tipo')] if params.get('tipo') else None,
-                    state=params.get('estado'),
-                    assigned_to=params.get('atribuido_para'),
-                    top=params.get('limite', 100)
-                )
-                dados = [item.__dict__ for item in items]
+                # Mapear sinônimos de datas
+                if 'data_modificacao' in params:
+                    params['modificado_em'] = params.pop('data_modificacao')
+                if 'data_criacao' in params:
+                    params['criado_em'] = params.pop('data_criacao')
+                filtros_aceitos = ['titulo', 'descricao', 'prioridade', 'criado_em', 'modificado_em', 'atribuido_para', 'tipo']
+                filtros_presentes = {k: v for k, v in params.items() if k in filtros_aceitos}
+                
+                # Conversão de datas relativas
+                for campo_data in ['criado_em', 'modificado_em']:
+                    if campo_data in filtros_presentes:
+                        valor = filtros_presentes[campo_data]
+                        if isinstance(valor, str):
+                            if valor.lower() == 'hoje':
+                                filtros_presentes[campo_data] = self.datetime.now().strftime('%Y-%m-%d')
+                            elif valor.lower() == 'ontem':
+                                filtros_presentes[campo_data] = (self.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+                
+                if filtros_presentes:
+                    items = self.azure_devops_service.search_work_items_advanced(filtros_presentes)
+                    dados = [item.__dict__ for item in items]
+                else:
+                    items = self.azure_devops_service.get_work_items(
+                        work_item_types=[params.get('tipo')] if params.get('tipo') else None,
+                        state=params.get('estado'),
+                        assigned_to=params.get('atribuido_para'),
+                        top=params.get('limite', 100)
+                    )
+                    dados = [item.__dict__ for item in items]
             elif func_name == 'listar_boards':
                 boards = self.azure_devops_service.get_boards()
                 dados = [board.__dict__ for board in boards]
+            elif func_name == 'buscar_work_item':
+                # Mapear sinônimos de datas
+                if 'data_modificacao' in params:
+                    params['modificado_em'] = params.pop('data_modificacao')
+                if 'data_criacao' in params:
+                    params['criado_em'] = params.pop('data_criacao')
+                filtros_aceitos = ['titulo', 'descricao', 'prioridade', 'criado_em', 'modificado_em', 'atribuido_para', 'tipo']
+                filtros_presentes = {k: v for k, v in params.items() if k in filtros_aceitos}
+                # Conversão de datas relativas
+                for campo_data in ['criado_em', 'modificado_em']:
+                    if campo_data in filtros_presentes:
+                        valor = filtros_presentes[campo_data]
+                        if isinstance(valor, str):
+                            if valor.lower() == 'hoje':
+                                filtros_presentes[campo_data] = self.datetime.now().strftime('%Y-%m-%d')
+                            elif valor.lower() == 'ontem':
+                                filtros_presentes[campo_data] = (self.datetime.now() - datetime.timedelta(days=1)).strftime('%Y-%m-%d')
+                if filtros_presentes:
+                    items = self.azure_devops_service.search_work_items_advanced(filtros_presentes)
+                    dados = [item.__dict__ for item in items]
+                elif 'id' in params:
+                    work_item = self.azure_devops_service.get_work_item_by_id(params['id'])
+                    dados = [work_item.__dict__] if work_item else []
+                elif 'termo' in params:
+                    items = self.azure_devops_service.search_work_items(params['termo'])
+                    dados = [item.__dict__ for item in items]
+                elif 'termo_busca' in params:
+                    items = self.azure_devops_service.search_work_items(params['termo_busca'])
+                    dados = [item.__dict__ for item in items]
+                elif 'titulo' in params:
+                    items = self.azure_devops_service.search_work_items(params['titulo'])
+                    dados = [item.__dict__ for item in items]
+                else:
+                    dados = []
+            elif func_name == 'mostrar_work_item':
+                if 'id' in params:
+                    work_item = self.azure_devops_service.get_work_item_by_id(params['id'])
+                    dados = [work_item.__dict__] if work_item else []
+                elif 'work_item_id' in params:
+                    work_item = self.azure_devops_service.get_work_item_by_id(params['work_item_id'])
+                    dados = [work_item.__dict__] if work_item else []
+                else:
+                    dados = []
             else:
                 dados = []
+            
+            
             # Enviar dados + pergunta original para o LLM gerar resposta final
             from src.services.llm.llm_factory import get_llm_provider
             from src.services.llm.base_provider import LLMRequest
@@ -333,7 +404,7 @@ Gere uma resposta natural, clara e objetiva para o usuário, explicando o result
                 user_name="Usuário",
                 organization="Org",
                 project="Projeto",
-                current_time=datetime.now(),
+                current_time=self.datetime.now(),
                 command_type=CommandType.LIST_BOARDS,
                 parameters={}
             )
@@ -371,21 +442,21 @@ Gere uma resposta natural, clara e objetiva para o usuário, explicando o result
             if not work_item_id:
                 return "ID do work item não especificado."
             
-            work_item = self.azure_devops_service.get_work_item(work_item_id)
+            work_item = self.azure_devops_service.get_work_item_by_id(work_item_id)
             
             if not work_item:
                 return f"Work item #{work_item_id} não encontrado."
             
             # Format response
             response = f"## 📋 Work Item #{work_item_id}\n\n"
-            response += f"**Título:** {work_item['title']}\n"
-            response += f"**Tipo:** {work_item['type']}\n"
-            response += f"**Estado:** {work_item['state']}\n"
-            response += f"**Criado por:** {work_item.get('created_by', 'N/A')}\n"
-            response += f"**Data de criação:** {work_item.get('created_date', 'N/A')}\n"
+            response += f"**Título:** {work_item.title}\n"
+            response += f"**Tipo:** {work_item.work_item_type}\n"
+            response += f"**Estado:** {work_item.state}\n"
+            response += f"**Responsável:** {work_item.assigned_to or 'N/A'}\n"
+            response += f"**Data de criação:** {work_item.created_date.strftime('%d/%m/%Y %H:%M') if work_item.created_date else 'N/A'}\n"
             
-            if work_item.get('description'):
-                response += f"\n**Descrição:**\n{work_item['description']}\n"
+            if work_item.description:
+                response += f"\n**Descrição:**\n{work_item.description}\n"
             
             return response
             
@@ -399,7 +470,7 @@ Gere uma resposta natural, clara e objetiva para o usuário, explicando o result
             if not self.azure_devops_service:
                 return "Serviço Azure DevOps não está configurado."
             
-            search_term = parsed_command.get('search_term')
+            search_term = parsed_command.get('search_terms')
             if not search_term:
                 return "Termo de busca não especificado."
             
@@ -412,7 +483,7 @@ Gere uma resposta natural, clara e objetiva para o usuário, explicando o result
             response = f"## 🔍 Resultados da Busca: '{search_term}'\n\n"
             
             for item in work_items[:10]:  # Limit to 10 items
-                response += f"• **#{item['id']}** - {item['title']} ({item['state']})\n"
+                response += f"• **#{item.id}** - {item.title} ({item.state})\n"
             
             if len(work_items) > 10:
                 response += f"\n... e mais {len(work_items) - 10} itens."
@@ -453,7 +524,7 @@ Gere uma resposta natural, clara e objetiva para o usuário, explicando o result
             user_name="Usuário",
             organization="Org",
             project="Projeto",
-            current_time=datetime.now(),
+            current_time=self.datetime.now(),
             command_type=CommandType.HELP,
             parameters={}
         )
@@ -531,7 +602,7 @@ Gere uma resposta natural, clara e objetiva para o usuário, explicando o result
         try:
             session_data = {
                 'conversation_history': self.conversation_manager.get_conversation_history(),
-                'timestamp': datetime.now().isoformat()
+                'timestamp': self.datetime.now().isoformat()
             }
             
             session_file = Path("config/session.json")
@@ -612,5 +683,5 @@ Gere uma resposta natural, clara e objetiva para o usuário, explicando o result
             'azure_devops_connected': self.test_azure_devops_connection(),
             'llm_connected': self.test_llm_connection(),
             'conversation_count': len(self.conversation_manager.get_conversation_history()),
-            'timestamp': datetime.now().isoformat()
+            'timestamp': self.datetime.now().isoformat()
         } 

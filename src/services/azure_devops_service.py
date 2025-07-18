@@ -74,13 +74,22 @@ class AzureDevOpsService:
             response.raise_for_status()
             return response.json()
         except requests.exceptions.RequestException as e:
+            # Log detalhado do corpo da resposta em caso de erro 400
+            if 'response' in locals() and hasattr(response, 'status_code') and response.status_code == 400:
+                try:
+                    logger.error(f"[DEBUG] Corpo da resposta 400: {response.text}")
+                except Exception as log_exc:
+                    logger.error(f"[DEBUG] Falha ao logar corpo da resposta 400: {log_exc}")
             logger.error(f"API request failed: {e}")
-            if response.status_code == 401:
-                raise AuthenticationError("Invalid credentials. Please check your Personal Access Token.")
-            elif response.status_code == 404:
-                raise AzureDevOpsAPIError(f"Resource not found: {endpoint}", 404)
+            if 'response' in locals() and hasattr(response, 'status_code'):
+                if response.status_code == 401:
+                    raise AuthenticationError("Invalid credentials. Please check your Personal Access Token.")
+                elif response.status_code == 404:
+                    raise AzureDevOpsAPIError(f"Resource not found: {endpoint}", 404)
+                else:
+                    raise AzureDevOpsAPIError(f"API request failed: {e}", response.status_code)
             else:
-                raise AzureDevOpsAPIError(f"API request failed: {e}", response.status_code if 'response' in locals() else None)
+                raise AzureDevOpsAPIError(f"API request failed: {e}", None)
     
     def test_connection(self) -> bool:
         """Test connection to Azure DevOps API"""
@@ -347,20 +356,33 @@ class AzureDevOpsService:
         
         where_clause = " AND ".join(search_conditions)
         
+        # WIQL mais simples para depuração
         wiql = f"""
-        SELECT [System.Id], [System.Title], [System.WorkItemType], [System.State], 
-               [System.Priority], [System.AssignedTo], [System.CreatedDate], 
-               [System.ChangedDate], [System.Description], [System.Tags], 
-               [System.AreaPath], [System.IterationPath]
+        SELECT [System.Id], [System.Title]
         FROM WorkItems
         WHERE {where_clause}
         ORDER BY [System.ChangedDate] DESC
         """
         
         try:
+            # Montar endpoint WIQL correto (sem organization no path)
+            proj = self.config.project
+            team = getattr(self.config, 'team', '').strip() if hasattr(self.config, 'team') else ''
+            if team:
+                wiql_endpoint = f"{proj}/{team}/_apis/wit/wiql"
+            else:
+                wiql_endpoint = f"{proj}/_apis/wit/wiql"
+            corpo_requisicao = {'query': wiql}
+            logger.error(f"[DEBUG] Endpoint WIQL: {self.base_url}/{wiql_endpoint}")
+            logger.error(f"[DEBUG] WIQL enviado:\n{wiql}")
+            logger.error(f"[DEBUG] Corpo da requisição: {json.dumps(corpo_requisicao, ensure_ascii=False, indent=2)}")
             # Execute search query
-            response = self._make_request("_apis/wit/wiql", 
-                                       params={'api-version': '7.0'})
+            response = self._make_request(
+                wiql_endpoint,
+                params={'api-version': '7.1'},
+                method='POST',
+                data=corpo_requisicao
+            )
             
             work_item_ids = [item['id'] for item in response.get('workItems', [])]
             work_items = self._get_work_item_details(work_item_ids)
@@ -371,6 +393,84 @@ class AzureDevOpsService:
         except Exception as e:
             logger.error(f"Search failed: {e}")
             raise 
+
+    def search_work_items_advanced(self, filters: Dict[str, Any], top: int = 100) -> List[WorkItem]:
+        """Busca work items por múltiplos atributos: título, descrição, prioridade, datas, usuário, tipo"""
+        conditions = [f"[System.TeamProject] = '{self.config.project}'"]
+        # Título
+        if 'titulo' in filters:
+            conditions.append(f"[System.Title] CONTAINS '{filters['titulo']}'")
+        # Descrição
+        if 'descricao' in filters:
+            conditions.append(f"[System.Description] CONTAINS '{filters['descricao']}'")
+        # Prioridade
+        if 'prioridade' in filters:
+            conditions.append(f"[Microsoft.VSTS.Common.Priority] = {int(filters['prioridade'])}")
+        # Data de criação
+        if 'criado_em' in filters:
+            # Aceita string 'YYYY-MM-DD' ou datetime
+            data = filters['criado_em']
+            if isinstance(data, datetime):
+                data = data.strftime('%Y-%m-%d')
+            # CORRIGIDO: usar apenas a data, sem tempo
+            conditions.append(f"[System.CreatedDate] = '{data}'")
+        # Data de modificação
+        if 'modificado_em' in filters:
+            data = filters['modificado_em']
+            if isinstance(data, datetime):
+                data = data.strftime('%Y-%m-%d')
+            # CORRIGIDO: usar apenas a data, sem tempo
+            conditions.append(f"[System.ChangedDate] = '{data}'")
+        # Usuário atribuído
+        if 'atribuido_para' in filters:
+            conditions.append(f"[System.AssignedTo] CONTAINS '{filters['atribuido_para']}'")
+        # Tipo
+        if 'tipo' in filters:
+            conditions.append(f"[System.WorkItemType] = '{filters['tipo']}'")
+        # Proteção contra datas futuras
+        # from datetime import datetime
+        hoje = datetime.now().strftime('%Y-%m-%d')
+        for campo_data in ['criado_em', 'modificado_em']:
+            if campo_data in filters:
+                data = filters[campo_data]
+                if isinstance(data, str) and data > hoje:
+                    logger.error(f"[DEBUG] Data futura detectada em '{campo_data}': {data} > {hoje}. Retornando lista vazia.")
+                    return []
+        # Monta o WHERE
+        where_clause = ' AND '.join(conditions)
+        # Seleciona todos os campos relevantes
+        select_fields = '[System.Id], [System.Title], [System.WorkItemType], [System.State], [Microsoft.VSTS.Common.Priority], [System.AssignedTo], [System.CreatedDate], [System.ChangedDate], [System.Description], [System.Tags], [System.AreaPath], [System.IterationPath]'
+        wiql = f"""
+        SELECT {select_fields}
+        FROM WorkItems
+        WHERE {where_clause}
+        ORDER BY [System.ChangedDate] DESC
+        """
+        try:
+            proj = self.config.project
+            team = getattr(self.config, 'team', '').strip() if hasattr(self.config, 'team') else ''
+            if team:
+                wiql_endpoint = f"{proj}/{team}/_apis/wit/wiql"
+            else:
+                wiql_endpoint = f"{proj}/_apis/wit/wiql"
+            corpo_requisicao = {'query': wiql}
+            logger.error(f"[DEBUG] Endpoint WIQL: {self.base_url}/{wiql_endpoint}")
+            logger.error(f"[DEBUG] WIQL enviado:\n{wiql}")
+            logger.error(f"[DEBUG] Corpo da requisição: {json.dumps(corpo_requisicao, ensure_ascii=False, indent=2)}")
+            response = self._make_request(
+                wiql_endpoint,
+                params={'api-version': '7.1'},
+                method='POST',
+                data=corpo_requisicao
+            )
+            print("DEBUG response:", response)
+            work_item_ids = [item['id'] for item in response.get('workItems', [])]
+            work_items = self._get_work_item_details(work_item_ids[:top])
+            logger.info(f"Search found {len(work_items)} work items (advanced search)")
+            return work_items
+        except Exception as e:
+            logger.error(f"Advanced search failed: {e}")
+            raise
 
     def get_project_info(self) -> dict:
         """Fetch project info from Azure DevOps API"""
